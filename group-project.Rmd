@@ -48,6 +48,15 @@ daysMissed <- daysMissed %>%
   rename(
     'District_code' = 'District Code')
 
+selectPop <- selectPop %>%
+  rename(
+    'District_code' = 'District Code')
+
+
+mobilityRate <- mobilityRate %>%
+  rename(
+    'District_code' = 'District Code')
+
 print(gradRate)
 
 
@@ -69,7 +78,7 @@ print(teachProg)
 print(teacherSalary)
 ```
 
-# Teacher Salary vs. Graduation Rate
+# 1. Teacher Salary vs. Graduation Rate
 ```{r}
 
 
@@ -99,7 +108,7 @@ gradRate_teacherSalary_graph
 ```
 
 
-# Teacher Data vs. Graduation Rate
+# 2. Teacher Data vs. Graduation Rate
 ```{r}
 
 
@@ -142,6 +151,8 @@ gradRate_teacherData_graph <-
 gradRate_teacherData_graph
 ```
 
+Observation: there is a correlation; the more experienced teacher, the higher graduation rate. 
+
 ```{r}
 StudentTeacherRatio_graph <-
   ggplot(gradRate_teacherData, aes(x = student_teacher_ratio, 
@@ -153,7 +164,7 @@ StudentTeacherRatio_graph <-
 StudentTeacherRatio_graph
 ```
 
-# Student Discipline vs. Graduation Rate
+# 3. Student Discipline vs. Graduation Rate
 ```{r}
 
 
@@ -182,7 +193,7 @@ gradRate_discipline_graph <-
 gradRate_discipline_graph
 ```
 
-# Demographic vs. Graduation Rate
+# 4. Demographic vs. Graduation Rate
 ```{r}
 
 
@@ -230,12 +241,12 @@ gradRate_demographic_graph <-
                                  y = percent_graduated, color = Race)) + geom_point() + 
   theme_minimal() + 
   ggtitle("Graduate rate percentage vs. 
-          Staff Demographic") + xlim(0, 1000)
+          Staff Demographic") + xlim(0, 1000)+ facet_grid(Race ~.) + geom_smooth(method=lm) 
 
 gradRate_demographic_graph 
 ```
 
-# Staffing Retention vs. Graduation Rate
+# 5. Staffing Retention vs. Graduation Rate
 
 ```{r}
 
@@ -245,15 +256,11 @@ gradRate_staffingRetention <- na.omit(gradRate_staffingRetention)
 print(gradRate_staffingRetention)
 ```
 
-# Graduation Rate vs. Day missed
+# 6. Graduation Rate vs. Day missed
 
 ```{r}
 
-print(daysMissed)
-
-
-
-str_pad(daysMissed$District_code, 8, pad = "0")
+daysMissed$District_code <- str_pad(daysMissed$District_code, 8, pad = "0")
 
 gradRateRename <- gradRate %>%
   rename(
@@ -262,12 +269,31 @@ gradRateRename <- gradRate %>%
 print(daysMissed)
 
 ```
+```{r}
 gradRate_daysMissed <- left_join(gradRateRename, daysMissed, by="District_code")
 gradRate_daysMissed <- na.omit(gradRate_daysMissed)
 
-print(gradRate_daysMissed)
+gradRate_daysMissed <- gradRate_daysMissed %>%
+  rename(
+    'percent_graduated' = '% Graduated')
 
-# SAT vs. Graduation Rate
+gradRate_daysMissed_long <- pivot_longer(gradRate_daysMissed, cols=13:17, names_to = "Num_days_missed", values_to = "percent_num_days_missed")
+
+print(gradRate_daysMissed_long)
+
+```
+
+```{r}
+gradRate_daysMissed_graph <-
+  ggplot(gradRate_daysMissed_long, aes(x = percent_num_days_missed, 
+                                 y = percent_graduated, color = Num_days_missed)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          SAT") + facet_grid(Num_days_missed ~.) + geom_smooth(method=lm)
+gradRate_daysMissed_graph 
+```
+
+# 7. SAT vs. Graduation Rate
 
 ```{r}
 
@@ -295,11 +321,11 @@ gradRate_SAT_graph <-
                                  y = percent_graduated, color = SAT_test_types)) + geom_point() + 
   theme_minimal() + 
   ggtitle("Graduate rate percentage vs. 
-          SAT") 
+          SAT") + facet_grid(SAT_test_types ~.) + geom_smooth(method=lm) + ylim(60,100)
 gradRate_SAT_graph 
 ```
 
-# Graduation plan Vs. Graduation rate
+# 8. Graduation plan Vs. Graduation rate
 
 ```{r}
 
@@ -319,37 +345,85 @@ gradRate_gradPlan_graph <-
                                  y = percent_graduated, color = Plan_type)) + geom_point() + 
   theme_minimal() + 
   ggtitle("Graduate rate percentage vs. 
-          Plan after high school") 
+          Plan after high school") + facet_grid(Plan_type ~.) + geom_smooth(method=lm) 
 gradRate_gradPlan_graph 
 ```
 
 
+# 9. Graduation rate vs. Students Background
 
+```{r}
+print(selectPop)
 
-
-
-
-
-
-
-
-
-
-
-gradRate_SAT <- gradRate_SAT %>%
+gradRateRename1 <- gradRate %>%
   rename(
-    'tests_taken' = 'Tests Taken')
+    'District_code' = 'District Code')
 
-gradRate_SAT_long <- pivot_longer(gradRate_SAT, cols=12:14, names_to = "SAT_test_types", values_to = "SAT_test_scores")
+selectPop$District_code <- str_pad(selectPop$District_code, 8, pad = "0")
 
-gradRate_SAT_long <- gradRate_SAT_long[!(is.na(gradRate_SAT_long$SAT_test_scores)), ]
+print(selectPop)
+
+```
+```{r}
+gradRate_selectPop <- left_join(gradRateRename1, selectPop, by="District_code")
+
+gradRate_selectPop <- gradRate_selectPop %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_selectPop <- gradRate_selectPop %>%
+  rename(
+    'economically_disadvantaged' = 'Economically Disadvantaged %')
 
 
+print(gradRate_selectPop)
+
+```
+```{r}
+gradRate_selectPop_graph <-
+  ggplot(gradRate_selectPop, aes(x = economically_disadvantaged, 
+                                 y = percent_graduated)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Economically Disadvantaged % Students") 
+gradRate_selectPop_graph 
+```
+
+```{r}
+
+print(mobilityRate)
+
+gradRateRename2 <- gradRate %>%
+  rename(
+    'District_code' = 'District Code')
+
+mobilityRate$District_code <- str_pad(mobilityRate$District_code, 8, pad = "0")
+
+print(mobilityRate)
 
 
+```
+```{r}
+gradRate_mobilityRate <- left_join(gradRateRename2, mobilityRate, by="District_code")
 
+gradRate_mobilityRate <- gradRate_mobilityRate %>%
+  rename(
+    'percent_graduated' = '% Graduated')
 
+gradRate_mobilityRate_long <- pivot_longer(gradRate_mobilityRate, cols=12:13, names_to = "churn_intake", values_to = "churn_intake_percentage")
 
+print(gradRate_mobilityRate_long)
+
+```
+```{r}
+gradRate_mobility_graph <-
+  ggplot(gradRate_mobilityRate_long, aes(x = churn_intake_percentage, 
+                                 y = percent_graduated, color = churn_intake)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Mobility rate") + facet_grid(churn_intake ~.) + xlim(0, 15) + ylim(50, 100) +  geom_smooth(method=lm) 
+gradRate_mobility_graph 
+```
 
 
 
