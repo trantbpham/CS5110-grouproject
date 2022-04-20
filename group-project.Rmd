@@ -1,0 +1,383 @@
+---
+title: "group-project"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(stringr)
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+
+```
+
+```{r}
+
+mobilityRate <- read_csv(file.path("mobilityrates.csv"))
+studentExpenditures <- read_csv(file.path("PerPupilExpenditures.csv"))
+plansforHSgrad <- read_csv(file.path("plansforhsgrad.csv"))
+  
+StudReten <- read_csv(file.path("retention2021.csv"))
+sat <- read_csv(file.path("sat_performance.csv"))
+selectPop <- read_csv(file.path("selectedpopulations.csv"))
+daysMissed <- read_csv(file.path("ssdr_days_missed.csv"))
+
+staffingRetention <-read_csv(file.path("staffingretention.csv"))
+eduGen <- read_csv(file.path("staffracegender.csv"))
+discipline <- read_csv(file.path("StudentDisciplineDataReport.csv"))
+
+teachData <- read_csv(file.path("teacherdata.csv"))
+teachProg <- read_csv(file.path("Teacherprogramarea.csv"))
+teacherSalary <-read_csv(file.path("TeacherSalaries.csv"))
+
+
+
+
+eduGen <- eduGen %>%
+  rename(
+    'District Code' = 'District/School Code')
+
+daysMissed <- daysMissed %>%
+  rename(
+    'District_code' = 'District Code')
+
+print(gradRate)
+
+
+print(mobilityRate)
+print(studentExpenditures)
+print(plansforHSgrad)
+print(StudReten)
+print(sat)
+print(selectPop)
+print(daysMissed)
+
+
+
+print(staffingRetention)
+print(eduGen)
+print(discipline)
+print(teachData)
+print(teachProg)
+print(teacherSalary)
+```
+
+# Teacher Salary vs. Graduation Rate
+```{r}
+
+
+gradRate_teacherSalary <- left_join(gradRate, teacherSalary, by="District Code")
+
+gradRate_teacherSalary <- gradRate_teacherSalary %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_teacherSalary <- gradRate_teacherSalary %>%
+  rename(
+    'average_salary' = 'Average Salary')
+
+print(gradRate_teacherSalary)
+```
+
+
+```{r}
+gradRate_teacherSalary_graph <-
+  ggplot(gradRate_teacherSalary, aes(x = average_salary, 
+                                 y = percent_graduated )) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Average teacher salary") + geom_smooth(method=lm) + ylim(50,100)
+
+gradRate_teacherSalary_graph
+```
+
+
+# Teacher Data vs. Graduation Rate
+```{r}
+
+
+gradRate_teacherData <- left_join(gradRate, teachData, by="District Code")
+
+gradRate_teacherData <- gradRate_teacherData %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_teacherData <- gradRate_teacherData %>%
+  rename(
+    'experienced_teacher_percent' = 'Percent of Experienced Teachers')
+
+gradRate_teacherData <- gradRate_teacherData %>%
+  rename(
+    'student_teacher_ratio' = 'Student / Teacher Ratio')
+
+print(gradRate_teacherData)
+```
+
+```{r}
+
+
+gradRate_teacherData <- gradRate_teacherData %>%
+      mutate_at("student_teacher_ratio", str_replace, "to 1", "")
+
+print(gradRate_teacherData)
+```
+
+
+```{r}
+gradRate_teacherData_graph <-
+  ggplot(gradRate_teacherData, aes(x = experienced_teacher_percent, 
+                                 y = percent_graduated )) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Experienced teacher percentage") + geom_smooth(method=lm) + 
+  ylim(75, 100)
+
+gradRate_teacherData_graph
+```
+
+```{r}
+StudentTeacherRatio_graph <-
+  ggplot(gradRate_teacherData, aes(x = student_teacher_ratio, 
+                                 y = percent_graduated )) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Student teacher ratio") + geom_smooth(method=lm) 
+
+StudentTeacherRatio_graph
+```
+
+# Student Discipline vs. Graduation Rate
+```{r}
+
+
+gradRate_discipline <- left_join(gradRate, discipline, by="District Code")
+gradRate_discipline <- na.omit(gradRate_discipline)
+
+gradRate_discipline <- gradRate_discipline %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_discipline <- gradRate_discipline %>%
+  rename(
+    'percent_suspension' = '% In-School Suspension')
+
+print(gradRate_discipline)
+```
+
+```{r}
+gradRate_discipline_graph <-
+  ggplot(gradRate_discipline, aes(x = percent_suspension, 
+                                 y = percent_graduated )) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Student discipline") + geom_smooth(method=lm) 
+
+gradRate_discipline_graph
+```
+
+# Demographic vs. Graduation Rate
+```{r}
+
+
+gradRate_demographic <- left_join(gradRate, eduGen, by="District Code")
+gradRate_demographic <- na.omit(gradRate_demographic)
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'African_American' = 'African American (#)')
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'White' = 'White (#)')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'Asian' = 'Asian (#)')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'Hispanic' = 'Hispanic (#)')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'Native_American' = 'Native American (#)')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'Hawaiian_Pacific_Islander' = 'Native Hawaiian, Pacific Islander (#)')
+
+gradRate_demographic <- gradRate_demographic %>%
+  rename(
+    'Multi_race_non_Hispanic' = 'Multi-Race,Non-Hispanic (#)')
+
+gradRate_demographic_long <- pivot_longer(gradRate_demographic, cols=11:17, names_to = "Race", values_to = "Race_number")
+
+print(gradRate_demographic_long)
+```
+```{r}
+gradRate_demographic_graph <-
+  ggplot(gradRate_demographic_long, aes(x = Race_number, 
+                                 y = percent_graduated, color = Race)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Staff Demographic") + xlim(0, 1000)
+
+gradRate_demographic_graph 
+```
+
+# Staffing Retention vs. Graduation Rate
+
+```{r}
+
+gradRate_staffingRetention <- left_join(gradRate, staffingRetention, by="District Code")
+gradRate_staffingRetention <- na.omit(gradRate_staffingRetention)
+
+print(gradRate_staffingRetention)
+```
+
+# Graduation Rate vs. Day missed
+
+```{r}
+
+print(daysMissed)
+
+
+
+str_pad(daysMissed$District_code, 8, pad = "0")
+
+gradRateRename <- gradRate %>%
+  rename(
+    'District_code' = 'District Code')
+
+print(daysMissed)
+
+```
+gradRate_daysMissed <- left_join(gradRateRename, daysMissed, by="District_code")
+gradRate_daysMissed <- na.omit(gradRate_daysMissed)
+
+print(gradRate_daysMissed)
+
+# SAT vs. Graduation Rate
+
+```{r}
+
+gradRate_SAT <- left_join(gradRate, sat, by="District Code")
+
+
+gradRate_SAT <- gradRate_SAT %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_SAT <- gradRate_SAT %>%
+  rename(
+    'tests_taken' = 'Tests Taken')
+
+gradRate_SAT_long <- pivot_longer(gradRate_SAT, cols=12:14, names_to = "SAT_test_types", values_to = "SAT_test_scores")
+
+gradRate_SAT_long <- gradRate_SAT_long[!(is.na(gradRate_SAT_long$SAT_test_scores)), ]
+
+print(gradRate_SAT_long)
+```
+
+```{r}
+gradRate_SAT_graph <-
+  ggplot(gradRate_SAT_long, aes(x = SAT_test_scores, 
+                                 y = percent_graduated, color = SAT_test_types)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          SAT") 
+gradRate_SAT_graph 
+```
+
+# Graduation plan Vs. Graduation rate
+
+```{r}
+
+gradRate_gradplan <- left_join(gradRate, plansforHSgrad, by="District Code")
+
+gradRate_gradplan <- gradRate_gradplan %>%
+  rename(
+    'percent_graduated' = '% Graduated')
+
+gradRate_gradplan_long <- pivot_longer(gradRate_gradplan, cols=11:20, names_to = "Plan_type", values_to = "Plan_percentage")
+
+print(gradRate_gradplan_long)
+```
+```{r}
+gradRate_gradPlan_graph <-
+  ggplot(gradRate_gradplan_long, aes(x = Plan_percentage, 
+                                 y = percent_graduated, color = Plan_type)) + geom_point() + 
+  theme_minimal() + 
+  ggtitle("Graduate rate percentage vs. 
+          Plan after high school") 
+gradRate_gradPlan_graph 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+gradRate_SAT <- gradRate_SAT %>%
+  rename(
+    'tests_taken' = 'Tests Taken')
+
+gradRate_SAT_long <- pivot_longer(gradRate_SAT, cols=12:14, names_to = "SAT_test_types", values_to = "SAT_test_scores")
+
+gradRate_SAT_long <- gradRate_SAT_long[!(is.na(gradRate_SAT_long$SAT_test_scores)), ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
