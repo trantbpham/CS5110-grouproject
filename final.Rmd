@@ -1,0 +1,202 @@
+---
+title: "DS5110:Project"
+author: "Pratyasha Sharma"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	echo = TRUE
+)
+```
+
+## Importing packages
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+```
+
+## Importing Data
+
+```{r}
+
+d <- "finalProject"
+advCourse <- read_csv(file.path(d,"AdvancedCourseCompletion.csv"))
+ap_part <- read_csv(file.path(d,"ap_participation.csv"))
+ap_perf <- read_csv(file.path(d,"ap_performance.csv"))
+art <- read_csv(file.path(d,"artcourse.csv"))
+attendance <- read_csv(file.path(d,"attendance.csv"))
+attrition <- read_csv(file.path(d,"AttritionReport.csv"))
+
+classSizeByClass <- read_csv(file.path(d,"ClassSizebyGenPopulation.csv"))
+classSizeByRace <- read_csv(file.path(d,"ClassSizebyRaceEthnicity.csv"))
+
+dropOut <- read_csv(file.path(d,"dropout.csv"))
+
+eduAge <- read_csv(file.path(d,"EducatorsbyAgeGroupsReport.csv"))
+enrollByGrade <- read_csv(file.path(d,"enrollmentbygrade.csv"))
+enrollByRaceNgender <- read_csv(file.path(d,"enrollmentbyracegender.csv"))
+
+gradeStaff <- read_csv(file.path(d,"gradestaffing.csv"))
+gradRate <- read_csv(file.path(d,"gradrates.csv"))
+
+mobilityRate <- read_csv(file.path(d,"mobilityrates.csv"))
+
+StudReten <- read_csv(file.path(d,"retention2021.csv"))
+
+sat <- read_csv(file.path(d,"sat_performance.csv"))
+selectPop <- read_csv(file.path(d,"selectedpopulations.csv"))
+daysMissed <- read_csv(file.path(d,"ssdr_days_missed.csv"))
+eduGen <- read_csv(file.path(d,"staffracegender.csv"))
+discipline <- read_csv(file.path(d,"StudentDisciplineDataReport.csv"))
+
+teachData <- read_csv(file.path(d,"teacherdata.csv"))
+teachProg <- read_csv(file.path(d,"Teacherprogramarea.csv"))
+
+
+```
+## EDA
+
+### 1. Number of students who took one or more Advanced Placement exams.
+```{r}
+ap_part <- ap_part |> 
+  rename(`1`=`One Test` ,`2`=`Two Tests`,`3`=`Three Tests`
+                             , `4`=`Four Tests`,`>=5`=`Five or More Tests`) |>
+  select(!c(`Tests Taken`,`Tests Takers`)) |>
+  filter(`District Code`!=0)
+
+pivot_longer(ap_part, cols=c(`1`,`2`,`3`,`4`,`>=5`), names_to = "TestsTaken", values_to ="TestTakers") |>  
+  group_by(TestsTaken) |> 
+  summarise(TestTakers=sum(TestTakers, na.rm=TRUE)) |>
+  ggplot( mapping=aes(x=`TestsTaken`,y=`TestTakers`)) +
+  geom_bar(stat = "identity") +
+  labs(title="Students taking Advanced Placement Exams",
+       x="Number of Tests Taken", y="Number of Students")
+```
+
+It shows that most of the students took placements exams only once while only less that 2500 students had to take 5 or more exams.
+
+### 2. Percentage of tests taken by students with each possible score on the Advanced Placement exam.
+```{r}
+ap_perf <- ap_perf |> 
+  select(!c(`% Score 1-2`,`% Score 3-5`)) |>
+  # select(`District Code`,`District Name`,`% Score 1-2`,`% Score 3-5`) |>
+  filter(`District Code`!=0) |>
+ap_perf <- ap_perf |> rename(`1`=`Score=1` ,`2`=`Score=2`,`3`=`Score=3`
+                             , `4`=`Score=4`,`5`=`Score=5`)
+
+pivot_longer(ap_perf, cols=c(`1`,`2`,`3`,`4`,`5`), 
+             names_to = "Scores", 
+             values_to ="# of Tests") |>  
+  group_by(`Scores`) |>
+  summarise(`Total`=sum(`# of Tests`, na.rm=TRUE)) |>
+  ggplot( mapping=aes(x=`Scores`,y=`Total`)) +
+  geom_bar(stat = "identity") +
+  labs(title="Scores in Advanced Placement Exams",
+       x="Scores Earned", y="Number of tests")
+```
+Above plot shows that most of the tests had a score of 3 while least number of tests had a score of 5. Since most of the students had taken the exam only once, it could be possible that most of them had a score of 3.
+
+### 3. The rate of Grade 11 and 12 students completing advanced courses by subject area.
+```{r}
+advCourse <- advCourse %>% 
+  select(!c(`Ch 74 Secondary Cooperative Program`,`# Students Completing Advanced`)) |>
+  filter(`District Code`!=0) 
+advCourse |> ggplot( mapping=aes(`% Students Completing Advanced`)) +
+  geom_boxplot() +
+  labs(title="Rate of students completing advanced courses")
+```
+
+It shows that for some of the districts all students completed the advanced courses while minimum rate was around 25% students. On an average, more than 62.5% of the students in 305 district entries were able to complete the courses.
+
+Districts in which 100% or 0% students completed advanced courses . 
+```{r}
+advCourse |> select(`District Name`,`District Code`,
+                    `% Students Completing Advanced`,
+                    `# Grade 11 and 12 Students`) |> 
+  filter(`% Students Completing Advanced` == 100.0 |
+           `% Students Completing Advanced` == 0 ) |>
+  rename(`% Completion` =`% Students Completing Advanced`,`Student Count`=`# Grade 11 and 12 Students`)
+
+```
+It can be noticed that the districts with 0% completion has quite low number of students in grade 11 and 12 and except **Martha's Vineyard Charter (District)** and **Pioneer Valley Chinese Immersion Charter (District)** all other schools with 100% completion has comparatively high student count.
+
+Plotting subject-wise Completions.
+```{r}
+advCourse100 <- pivot_longer(advCourse, cols=c(`% ELA`,`% Math`,`% Science and Technology`,
+                               `% Computer Science`,
+                             `% History and Social Sciences`,`% Arts`,
+                             `% All Other Subjects`), 
+             names_to = "Subject", 
+             values_to ="% Completion") |> 
+  mutate(Subject=gsub("%","",Subject)) |>
+  filter(`% Students Completing Advanced` == 100.0)
+
+advCourse100 |> 
+  ggplot( mapping=aes(x=factor(`Subject`),y=`% Completion`)) +
+  geom_boxplot() +
+  labs(title="Subject-wise completion among 100% completion rate districts",
+       x="Subjects", y="Percentage of Completion") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.1, hjust=1))
+```
+
+Clearly, the highest completion has been for Math while surprisingly for Computer Science, it has been the least.
+
+```{r}
+advCourse100|> 
+  ggplot( mapping=aes(x=factor(`District Code`),y=`% Completion`,
+                      fill = `Subject`))+
+  geom_bar(position="dodge", stat="identity")+
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  labs(title="District-wise Subject completion among 100% completion districts",
+       x="Districts", y="% Completion", 
+       fill="Subjects") 
+```
+
+For district code **4660000**, only math has been completed and which is why it seems to join the 100% completion club!
+Since, we noticed before, it has only 22 students which is really less compared to rest of the other schools that had 100% completion rate. District code **4970000**, has done really well as it only had 68 students as compared to district code **4890000**, that had 407 students!
+
+### 4. Dropouts
+```{r}
+dropOut |> rename(`# Enrolled 9-12` =`# Enrolled Grades 09 through 12`,
+                  `Dropout`=`# Dropout All Grades`) |>
+ select(`District Code`,`# Enrolled 9-12`,`Dropout`,`District Name`) |> drop_na() |>
+  filter(`District Code`!=0) |>
+  filter(`Dropout`== max(Dropout))
+```
+
+
+
+
+### 4. Class size based on different classes. 
+```{r}
+classSizeLong <- pivot_longer(classSizeByClass, cols=c(`Female %`,`Male %`,`English Language Learner %`,
+                               `Students with Disabilities %`,
+                             `Economically Disadvantaged %`),names_to = "Class",
+             values_to = "% of Class Size" ) |>
+  mutate(Class=gsub("%","",Class))
+
+classSizeLong |> group_by(`Class`) |> filter(Class %in% c(`Female`,`Male`)) |>
+  summarise(`Total`=sum(`% of Class Size`, na.rm=TRUE))
+  ggplot( mapping=aes(x=factor(`Subject`),y=`% Completion`)) +
+  geom_bar() +
+  
+  labs(title="Subject-wise completion among 100% completion rate districts",
+       x="Subjects", y="Percentage of Completion") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.1, hjust=1))
+ 
+```
+
+
+
+
+

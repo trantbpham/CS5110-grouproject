@@ -1,0 +1,176 @@
+---
+title: "DS 5110 Final Project"
+author: "Tim Cauley"
+date: '2022-03-16'
+output: pdf_document
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing packages
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+```
+
+## Importing Data
+
+```{r message=FALSE, warning=FALSE}
+sat <- read_csv("/Users/Tim/Downloads/sat_performance.csv")
+expend <- read_csv("/Users/Tim/Downloads/PerPupilExpenditures.csv")
+salary <- read_csv("/Users/Tim/Downloads/TeacherSalaries.csv")
+enroll <- read_csv("/Users/Tim/Downloads/enrollmentbygrade.csv")
+ap <- read_csv("/Users/Tim/Downloads/ap_participation.csv")
+reten <- read_csv("/Users/Tim/Downloads/staffingretention.csv")
+classSize <- read_csv("/Users/Tim/Downloads/ClassSizebyRaceEthnicity.csv")
+college <- read_csv("/Users/Tim/Downloads/plansforhsgrad.csv")
+attendance <- read_csv("/Users/Tim/Downloads/attendance.csv")
+attrition <- read_csv("/Users/Tim/Downloads/AttritionReport.csv")
+advCourse <- read_csv("/Users/Tim/Downloads/AdvancedCourseCompletion.csv")
+gradRate <- read_csv("/Users/Tim/Downloads/gradrates.csv")
+art <- read_csv("/Users/Tim/Downloads/artcourse.csv")
+eduAge <- read_csv("/Users/Tim/Downloads/EducatorsbyAgeGroupsReport.csv")
+discipline <- read_csv("/Users/Tim/Downloads/StudentDisciplineDataReport.csv")
+eduGen <- read_csv("/Users/Tim/Downloads/staffracegender.csv")
+teachData <- read_csv("/Users/Tim/Downloads/teacherdata.csv")
+```
+
+
+## Cleaning data
+
+```{r}
+sat <- sat %>% mutate(`Total Score` = `Reading / Writing` + Math) %>% 
+  select(!Writing)
+expend <- expend %>% select(`District Code`, `Total Expenditures per Pupil`)
+expend$`Total Expenditures per Pupil` <- parse_number(expend$`Total Expenditures per Pupil`)
+enroll <- enroll %>% 
+  mutate(`HS Enrollment` = `9` + `10` + `11` + `12`) %>% 
+  select(`District Code`, `HS Enrollment`, Total) %>% 
+  rename(Enrollment = Total)
+ap <- ap %>% select(`District Code`, `Tests Takers`)
+reten <- reten %>% select(`District Code`, `Teacher % Retained`) %>% 
+  rename(`Teacher Retention Rate` = `Teacher % Retained`)
+salary$`Average Salary` <- parse_number(salary$`Average Salary`)
+classSize <- classSize %>% select(`District Code`, `Average Class Size`)
+college <- college %>% 
+  mutate(`Percent Going to College` = college$`4 Year Private College` + college$`4 Year Public College` + college$`2 Year Private College` + college$`2 Year Public College`) %>% 
+  select(`District Code`, `Percent Going to College`)
+attendance <- attendance %>% select(`District Code`, `Attendance Rate`, `Average # of Absences`)
+attrition <- attrition %>% select(`District Code`, ALL) %>% 
+  rename(Attrition = ALL)
+advCourse <- advCourse %>% 
+  select(`District Code`, `% Students Completing Advanced`, `% Math`, `% ELA`) %>% 
+  rename(`Adv Course % Math` = `% Math`, `Adv Course % ELA` = `% ELA`)
+gradRate <- gradRate %>% select(`District Code`, `% Graduated`)
+art <- art %>% 
+  mutate(`% in an Art Course` = `All Grades` / `Total Students` * 100) %>% 
+  select(`District Code`, `% in an Art Course`)
+eduAge <- eduAge %>% 
+  mutate(`% of Teachers <40` = (`<26 yrs (# )` + `26-32 yrs (#)` + `33-40 yrs (#)`) / `FTE Count` * 100) %>% 
+  select(`District Code`, `% of Teachers <40`)
+discipline <- discipline %>% 
+  mutate(`% Disciplined` = `Students Disciplined` / `Students` * 100) %>% 
+  select(`District Code`, `% Disciplined`)
+eduGen <- eduGen %>% 
+  mutate(`% Female Teachers` = `Females (#)` / `FTE Count` * 100) %>% 
+  select(`District/School Code`, `% Female Teachers`) %>% 
+  rename(`District Code` = `District/School Code`)
+teachData <- teachData %>% select(!`District Name`)
+teachData$`Student / Teacher Ratio` <- substr(teachData$`Student / Teacher Ratio`,1,nchar(teachData$`Student / Teacher Ratio`)-5) %>% parse_number()
+
+```
+
+
+## Joining Data
+
+```{r}
+eduData <- inner_join(sat, expend, by = "District Code") %>% 
+  inner_join(salary, by = "District Code") %>% 
+  inner_join(enroll, by = "District Code") %>% 
+  inner_join(ap, by = "District Code") %>% 
+  inner_join(reten, by = "District Code") %>% 
+  inner_join(classSize, by = "District Code") %>% 
+  inner_join(college, by = "District Code") %>% 
+  inner_join(attendance, by = "District Code") %>%
+  inner_join(attrition, by = "District Code") %>%
+  inner_join(advCourse, by = "District Code") %>% 
+  inner_join(gradRate, by = "District Code") %>% 
+  inner_join(art, by = "District Code") %>% 
+  inner_join(eduAge, by = "District Code") %>% 
+  inner_join(discipline, by = "District Code") %>%
+  inner_join(eduGen, by = "District Code") %>%
+  inner_join(teachData, by = "District Code") %>%
+  mutate(`Percent of HS in AP` = `Tests Takers` / `HS Enrollment` * 100) %>% 
+  mutate(`Adjusted Score` = `Total Score` * `% Graduated` / 100)
+```
+
+
+## Trying Models
+
+```{r}
+summary(lm(`Total Score` ~ `Student / Teacher Ratio` + `Average Salary` + `Teacher Retention Rate` + `Total Expenditures per Pupil` + `Percent of HS in AP` + `Percent Going to College` + `Attendance Rate` + `Average # of Absences` + Attrition + `% Students Completing Advanced` + `Adv Course % Math` + `Adv Course % ELA` + `% in an Art Course` + `% of Teachers <40` + `% Disciplined` + `% Female Teachers`, data=eduData))
+
+summary(lm(`Percent Going to College` ~ `Average Class Size` + `Average Salary` + `Teacher Retention Rate` + `Total Expenditures per Pupil` + `Percent of HS in AP` + `Total Score` + `Attendance Rate` + `Average # of Absences` + Attrition + `% Students Completing Advanced` + `Adv Course % Math` + `Adv Course % ELA` + `% in an Art Course` + + `% of Teachers <40` + `% Disciplined` + `% Female Teachers`, data=eduData))
+
+summary(lm(`% Graduated` ~ `Average Class Size` + `Average Salary` + `Teacher Retention Rate` + `Total Expenditures per Pupil` + `Percent of HS in AP` + `Total Score` + `Attendance Rate` + `Average # of Absences` + Attrition + `% Students Completing Advanced` + `Adv Course % Math` + `Adv Course % ELA` + `% in an Art Course` + + `% of Teachers <40` + `% Disciplined` + `% Female Teachers`, data=eduData))
+
+summary(lm(`Adjusted Score` ~ `Average Class Size` + `Average Salary` + `Teacher Retention Rate` + `Total Expenditures per Pupil` + `Percent of HS in AP` + `Total Score` + `Attendance Rate` + `Average # of Absences` + Attrition + `% Students Completing Advanced` + `Adv Course % Math` + `Adv Course % ELA` + `% in an Art Course` + + `% of Teachers <40` + `% Disciplined` + `% Female Teachers`, data=eduData))
+
+```
+
+
+## Feature Selection with adjusted score as dependent
+
+```{r}
+temp <- eduData %>% 
+  select(!c(`District Name`, `District Code`, `Tests Taken`, `Salary Totals`, `FTE Count`, `HS Enrollment`, Enrollment, `Tests Takers`, `Total Score`, `% Graduated`, `Total # of Teachers (FTE)`, `Reading / Writing`, `Math`, `Percent Going to College`))
+
+base.mod <- lm(`Adjusted Score` ~ 1 , data=temp) 
+all.mod <- lm(`Adjusted Score` ~ . , data= temp)
+stepMod <- step(base.mod, scope = list(lower = base.mod, upper = all.mod), direction = "forward", trace = 0, steps = 1000)
+
+shortlistedVars <- names(unlist(stepMod[[1]])) 
+shortlistedVars <- shortlistedVars[!shortlistedVars %in% "(Intercept)"]
+
+print(shortlistedVars)
+
+```
+
+```{r}
+summary(lm(`Adjusted Score` ~ `Attendance Rate` + `Adv Course % Math` + Attrition + `Percent of HS in AP` + `Adv Course % ELA` + `Average # of Absences` + `Percent of Experienced Teachers` + `% Disciplined` + `% of Teachers <40`, data = eduData))
+```
+
+
+## Feature Selection with graduation rate as dependent
+
+```{r}
+temp <- eduData %>% 
+  select(!c(`District Name`, `District Code`, `Tests Taken`, `Salary Totals`, `FTE Count`, `HS Enrollment`, Enrollment, `Tests Takers`, `Adjusted Score`, `Total Score`, `Total # of Teachers (FTE)`, `Reading / Writing`, `Math`, `Percent Going to College`))
+
+base.mod <- lm(`% Graduated` ~ 1 , data=temp) 
+all.mod <- lm(`% Graduated` ~ . , data= temp)
+stepMod <- step(base.mod, scope = list(lower = base.mod, upper = all.mod), direction = "forward", trace = 0, steps = 1000)
+
+shortlistedVars <- names(unlist(stepMod[[1]])) 
+shortlistedVars <- shortlistedVars[!shortlistedVars %in% "(Intercept)"]
+
+print(shortlistedVars)
+
+```
+
+```{r}
+summary(lm(`% Graduated` ~ Attrition + `Percent of Experienced Teachers` + `% Students Completing Advanced` + `Attendance Rate` + `Average # of Absences` + `Percent of HS in AP` + `% in an Art Course` + `Percent of Teachers without Waiver or Provisional License` + `Average Salary` + `Adv Course % ELA` + `% Female Teachers` + `% of Teachers <40`, data = eduData))
+```
+
+```{r}
+ggplot(eduData, aes(x=`Average Salary`, y= `Total Score`))+
+  geom_point()
+```
+
